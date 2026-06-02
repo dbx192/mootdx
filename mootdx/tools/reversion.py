@@ -14,13 +14,18 @@ def factor_reversion(symbol: str, method: str = 'qfq', raw: pd.DataFrame = None)
         factor = factor.sort_index(ascending=True)
         raw = raw.sort_index(ascending=True)
 
-        data = pd.concat([raw, factor.loc[raw.index[0]: raw.index[-1], ['factor']]], axis=1)
-        data.factor = data.factor.fillna(method=('ffill', 'bfill')[method == 'qfq'], axis=0)
-        data.factor = data.factor.fillna(1.0, axis=0)
-        data.factor = data.factor.astype(float)
+        new_idx = pd.date_range(start=factor.index[0], end=factor.index[-1], freq='D')
+        factor = factor.reindex(new_idx)
+        factor['factor'] = factor['factor'].ffill().bfill().fillna(1.0)
+
+        data = raw.merge(factor, left_index=True, right_index=True, how='left')
+        data['factor'] = data['factor'].ffill().bfill().fillna(1.0).astype(float)
 
         for col in ['open', 'high', 'low', 'close', ]:
             data[col] = data[col] * data['factor']
+            
+            if method == 'qfq':
+                data[col] = data[col] / factor['factor'].iloc[-1]
 
         return data
 

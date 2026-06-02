@@ -21,6 +21,10 @@
 
 版本更新日志: <https://mootdx.readthedocs.io/zh_CN/latest/history/>
 
+### fix 2026-06-02：
+
+修复复权拼接问题，替换安装：`pip install -U --force-reinstall git+https://github.com/kbxu/mootdx.git --no-deps`
+
 运行环境
 --------
 
@@ -110,11 +114,6 @@ Affair.fetch(downdir='tmp', filename='gpcw19960630.zip')
 # 下载全部
 Affair.parse(downdir='tmp')
 ```
-
-加微信交流
-----------
-
-![](docs/img/IMG_2851.JPG)
 
 常见问题
 --------
