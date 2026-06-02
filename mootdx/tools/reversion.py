@@ -26,9 +26,9 @@ def factor_reversion(symbol: str, method: str = 'qfq', raw: pd.DataFrame = None)
         factor['factor'] = factor['factor'].ffill().bfill().fillna(1.0)
 
         if is_index_datetime:
-            raw['date'] = raw.index.date
+            raw['dateTmp'] = raw.index.date
             factor.index = factor.index.date
-            data = raw.merge(factor, left_on='date', right_index=True, how='left').drop(columns=['date'])
+            data = raw.merge(factor, left_on='dateTmp', right_index=True, how='left').drop(columns=['dateTmp'])
         else:
             data = raw.merge(factor, left_index=True, right_index=True, how='left')
             
