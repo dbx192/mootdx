@@ -13,12 +13,25 @@ def factor_reversion(symbol: str, method: str = 'qfq', raw: pd.DataFrame = None)
     if not factor.empty:
         factor = factor.sort_index(ascending=True)
         raw = raw.sort_index(ascending=True)
+        
+        if type(raw.index) == pd.DatetimeIndex:
+            is_index_datetime = True
+        else:
+            is_index_datetime = False
 
-        new_idx = pd.date_range(start=factor.index[0], end=factor.index[-1], freq='D')
+        start_date = min(factor.index[0].strftime('%Y-%m-%d'), raw.index[0].strftime('%Y-%m-%d')) if is_index_datetime else min(factor.index[0], raw.index[0])
+        end_date = max(factor.index[-1].strftime('%Y-%m-%d'), raw.index[-1].strftime('%Y-%m-%d')) if is_index_datetime else max(factor.index[-1], raw.index[-1])
+        new_idx = pd.date_range(start=start_date, end=end_date, freq='D')
         factor = factor.reindex(new_idx)
         factor['factor'] = factor['factor'].ffill().bfill().fillna(1.0)
 
-        data = raw.merge(factor, left_index=True, right_index=True, how='left')
+        if is_index_datetime:
+            raw['date'] = raw.index.date
+            factor.index = factor.index.date
+            data = raw.merge(factor, left_on='date', right_index=True, how='left').drop(columns=['date'])
+        else:
+            data = raw.merge(factor, left_index=True, right_index=True, how='left')
+            
         data['factor'] = data['factor'].ffill().bfill().fillna(1.0).astype(float)
 
         for col in ['open', 'high', 'low', 'close', ]:
