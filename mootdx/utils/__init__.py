@@ -132,6 +132,8 @@ def to_data(v, **kwargs):
         adjust = 'qfq'
     elif adjust in ['02', 'hfq', 'after']:
         adjust = 'hfq'
+    elif adjust in ['bfq']:
+        adjust = 'bfq'
     else:
         adjust = None
 
@@ -164,7 +166,7 @@ def to_data(v, **kwargs):
     if 'vol' in result.columns:
         result['volume'] = result.vol
 
-    if adjust and adjust in ['qfq', 'hfq'] and symbol:
+    if adjust and adjust in ['qfq', 'hfq', 'bfq'] and symbol:
         from mootdx.utils.adjust import to_adjust
 
         result = to_adjust(result, symbol=symbol, adjust=adjust)
