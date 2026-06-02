@@ -25,7 +25,7 @@ def factor_reversion(symbol: str, method: str = 'qfq', raw: pd.DataFrame = None)
             data[col] = data[col] * data['factor']
             
             if method == 'qfq':
-                data[col] = data[col] / factor['factor'].iloc[-1]
+                data[col] = data[col] / float(factor['factor'].iloc[-1])
 
         return data
 
