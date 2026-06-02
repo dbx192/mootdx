@@ -23,7 +23,11 @@
 
 ### fix 2026-06-02：
 
-修复复权拼接问题，替换安装：`pip install -U --force-reinstall git+https://github.com/kbxu/mootdx.git --no-deps`
+-   修复复权拼接问题；
+-   修复复权下载缓存不区分前后复权问题；
+-   新增不复权`adjust='bfq'`入口（返回叠加后复权因子）；
+
+-   替换安装：`pip install -U --force-reinstall git+https://github.com/kbxu/mootdx.git --no-deps`
 
 运行环境
 --------
