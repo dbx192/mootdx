@@ -8,6 +8,18 @@ from mootdx.logger import logger
 from mootdx.utils import TqdmUpTo
 
 
+def _get_event_loop():
+    """兼容获取事件循环，Python 3.10+ 不再自动创建事件循环"""
+    try:
+        loop = asyncio.get_event_loop()
+        if loop.is_closed():
+            raise RuntimeError('loop closed')
+    except RuntimeError:
+        loop = asyncio.new_event_loop()
+        asyncio.set_event_loop(loop)
+    return loop
+
+
 def download(downdir, filename):
     """
     带进度条下载函数
@@ -38,7 +50,7 @@ async def fetch_file(downdir, file_obj):
         logger.warning(f'文件已经存在: {filepath}')
         return None
 
-    result = await asyncio.get_event_loop().run_in_executor(
+    result = await asyncio.get_running_loop().run_in_executor(
         None,
         partial(financial.Financial().fetch_only, report_hook=None, filename=file_obj['filename'], downdir=downdir),
     )
@@ -111,7 +123,7 @@ class Affair(object):
             return True
 
         tasks = []
-        event = asyncio.get_event_loop()
+        event = _get_event_loop()
 
         for x in history.fetch_and_parse():
             task = event.create_task(fetch_file(file_obj=x, downdir=downdir))

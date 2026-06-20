@@ -103,14 +103,26 @@ async def verify(proxy: dict, index):
     :param proxy: 代理IP信息
     :return:
     """
-    return await asyncio.get_event_loop().run_in_executor(None, functools.partial(connect2, proxy=proxy, index=index))
+    return await asyncio.get_running_loop().run_in_executor(None, functools.partial(connect2, proxy=proxy, index=index))
+
+
+def _get_event_loop():
+    """兼容获取事件循环，Python 3.10+ 不再自动创建事件循环"""
+    try:
+        loop = asyncio.get_event_loop()
+        if loop.is_closed():
+            raise RuntimeError('loop closed')
+    except RuntimeError:
+        loop = asyncio.new_event_loop()
+        asyncio.set_event_loop(loop)
+    return loop
 
 
 def server(index=None, limit=5, console=False, sync=True):
     _hosts = hosts[index]
 
     def async_event():
-        event = asyncio.get_event_loop()
+        event = _get_event_loop()
         tasks = []
 
         while len(_hosts) > 0:
@@ -186,7 +198,8 @@ def bestip(console=False, limit=5, sync=False) -> None:
             logger.error('请手动运行`python -m mootdx bestip`')
             break
 
-    json.dump(default, open(config_, 'w', encoding='utf-8'), indent=2, ensure_ascii=False)
+    with open(config_, 'w', encoding='utf-8') as fp:
+        json.dump(default, fp, indent=2, ensure_ascii=False)
 
 
 if __name__ == '__main__':

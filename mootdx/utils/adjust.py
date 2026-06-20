@@ -15,13 +15,16 @@ from mootdx.cache import file_cache
 from mootdx.consts import return_last_value
 from mootdx.quotes import Quotes
 
+# 默认请求超时（秒）
+DEFAULT_TIMEOUT = httpx.Timeout(10.0, connect=5.0)
+
 
 @retry(wait=wait_fixed(2), retry_error_callback=return_last_value, stop=stop_after_attempt(5))
 def fq_factor(method: str, symbol: str) -> pd.DataFrame:
     zh_sina_a_stock_hfq_url = 'https://finance.sina.com.cn/realstock/company/{}/hfq.js'
     zh_sina_a_stock_qfq_url = 'https://finance.sina.com.cn/realstock/company/{}/qfq.js'
 
-    client = httpx.Client(verify=False)
+    client = httpx.Client(verify=False, timeout=DEFAULT_TIMEOUT)
 
     if method == 'hfq':
         res = client.get(zh_sina_a_stock_hfq_url.format(symbol))
@@ -96,7 +99,7 @@ def to_adjust2(temp_df, symbol=None, adjust=None):
         del hfq_factor_df['date']
 
         temp_df = pd.merge(temp_df, hfq_factor_df, left_index=True, right_index=True, how='outer')
-        temp_df.fillna(method='ffill', inplace=True)
+        temp_df = temp_df.ffill()
         temp_df = temp_df.astype(float)
         temp_df.dropna(inplace=True)
         temp_df.drop_duplicates(subset=['open', 'high', 'low', 'close', 'volume'], inplace=True)
@@ -122,7 +125,7 @@ def to_adjust2(temp_df, symbol=None, adjust=None):
         # del qfq_factor_df["date"]
 
         temp_df = pd.merge(temp_df, qfq_factor_df, left_index=True, right_index=True, how='outer')
-        temp_df.fillna(method='ffill', inplace=True)
+        temp_df = temp_df.ffill()
 
         # temp_df = temp_df.astype(float)
 

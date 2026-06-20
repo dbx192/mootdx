@@ -6,6 +6,9 @@ from mootdx.logger import logger
 from mootdx.utils import get_config_path
 from mootdx.utils import get_stock_market
 
+# 默认请求超时（秒）
+DEFAULT_TIMEOUT = httpx.Timeout(10.0, connect=5.0)
+
 
 def fq_factor(symbol: str, method: str, ) -> pd.DataFrame:
     symbol = symbol.replace('sh', '').replace('sz', '').replace('bj', '')
@@ -18,9 +21,9 @@ def fq_factor(symbol: str, method: str, ) -> pd.DataFrame:
 
         try:
             url = 'https://finance.sina.com.cn/realstock/company/{}/{}.js'
-            rsp = httpx.get(url.format(symbol, method))
+            rsp = httpx.get(url.format(symbol, method), timeout=DEFAULT_TIMEOUT)
             res = pd.DataFrame(eval(rsp.text.split('=')[1].split('\n')[0])['data'])
-        except (SyntaxError, httpx.ConnectError) as ex:
+        except (SyntaxError, httpx.HTTPError) as ex:
             logger.error(ex)
             return pd.DataFrame(None)
 

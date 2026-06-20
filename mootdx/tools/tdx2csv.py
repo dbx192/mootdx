@@ -8,6 +8,18 @@ import pandas as pd
 from mootdx.logger import logger
 
 
+def _get_event_loop():
+    """兼容获取事件循环，Python 3.10+ 不再自动创建事件循环"""
+    try:
+        loop = asyncio.get_event_loop()
+        if loop.is_closed():
+            raise RuntimeError('loop closed')
+    except RuntimeError:
+        loop = asyncio.new_event_loop()
+        asyncio.set_event_loop(loop)
+    return loop
+
+
 def txt2csv(infile: str, outfile: str = None) -> pd.DataFrame:
     """通达信导出文件转换为 Pandas 可用的 csv 文件
 
@@ -33,7 +45,7 @@ def txt2csv(infile: str, outfile: str = None) -> pd.DataFrame:
 
 
 async def covert(src, dst):
-    return await asyncio.get_event_loop().run_in_executor(None, partial(txt2csv, infile=src, outfile=dst))
+    return await asyncio.get_running_loop().run_in_executor(None, partial(txt2csv, infile=src, outfile=dst))
 
 
 def batch(src, dst):
@@ -44,7 +56,7 @@ def batch(src, dst):
     """
 
     tasks = []
-    event = asyncio.get_event_loop()
+    event = _get_event_loop()
 
     # 分配任务
     for x in glob.glob1(src, '*.txt'):

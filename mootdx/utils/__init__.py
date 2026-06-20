@@ -13,6 +13,9 @@ from mootdx.consts import MARKET_SH
 from mootdx.consts import MARKET_SZ
 from mootdx.logger import logger
 
+# 默认请求超时（秒）
+_DEFAULT_TIMEOUT = httpx.Timeout(10.0, connect=5.0)
+
 
 def get_stock_markets(symbols=None):
     results = []
@@ -25,54 +28,46 @@ def get_stock_markets(symbols=None):
 
     return results
 
-
 def get_stock_market(symbol='', string=False):
-    """判断股票ID对应的证券市场匹配规则
-
-    ['50', '51', '60', '90', '110'] 为 sh
-    ['00', '12'，'13', '18', '15', '16', '18', '20', '30', '39', '115'] 为 sz
-    ['5', '6', '9'] 开头的为 sh， 其余为 sz
-
-    :param string: False 返回市场ID，否则市场缩写名称
-    :param symbol: 股票ID, 若以 'sz', 'sh' 开头直接返回对应类型，否则使用内置规则判断
-    :return 'sh' or 'sz'
     """
-
+    最新A股6位编码市场判断（兼容北交所920新规、沪深全品种）
+    :param symbol: 证券代码，支持SH600000 / SZ300750 / 纯数字
+    :param string: True返回sh/sz/bj字符串，False返回市场数字常量
+    """
     assert isinstance(symbol, str), 'stock code need str type'
+    symbol = symbol.strip().upper()
+    market = "sz"   # 默认深圳
 
-    market = 'sh'
-
-    if symbol.startswith(('sh', 'sz', 'SH', 'SZ')):
+    # 优先级1：自带SH/SZ/BJ前缀直接判定
+    if symbol.startswith(("SH", "SZ", "BJ")):
         market = symbol[:2].lower()
+    else:
+        # 北交所 920 专属号段（最高优先级）
+        if symbol.startswith("920"):
+            market = "bj"
+        # 上交所SH 前缀全集（支持两位和三位）
+        elif symbol.startswith(("60", "68", "50", "51", "110", "113", "132", "204", "90")):
+            market = "sh"
+        # 深市逆回购特殊四位前缀，避免被13前缀误判（必须放在sz前缀之前）
+        elif symbol.startswith("1318"):
+            market = "sz"
+        # 深交所SZ 两位前缀全集
+        elif len(symbol) >= 2 and symbol[:2] in {"00", "12", "13", "15", "16", "18", "20", "30", "39"}:
+            market = "sz"
+        # 老三板、新三板 4/8开头归北交所（北交所股票以8开头，部分4开头也归此）
+        elif symbol.startswith(("4", "8")):
+            market = "bj"
+        # 其余未匹配的均保持默认深圳（sz）
 
-    elif symbol.startswith(('50', '51', '60', '68', '90', '110', '113', '132', '204')):
-        market = 'sh'
-
-    elif symbol.startswith(('00', '12', '13', '18', '15', '16', '18', '20', '30', '39', '115', '1318')):
-        market = 'sz'
-
-    elif symbol.startswith(('5', '6', '9', '7')):
-        market = 'sh'
-
-    elif symbol.startswith(('4', '8')):
-        market = 'bj'
-
-    # logger.debug(f"market => {market}")
-
-    if string is False:
+    # 返回格式转换
+    if not string:
         if market == 'sh':
-            market = MARKET_SH
-
-        if market == 'sz':
-            market = MARKET_SZ
-
-        if market == 'bj':
-            market = MARKET_BJ
-
-    # logger.debug(f"market => {market}")
-
+            return MARKET_SH
+        elif market == 'sz':
+            return MARKET_SZ
+        elif market == 'bj':
+            return MARKET_BJ
     return market
-
 
 def gpcw(filepath):
     cw_file = open(filepath, 'rb')
@@ -297,7 +292,7 @@ def stock_bj_a() -> pd.DataFrame:
         '_': '1623833739532',
     }
 
-    r = httpx.get(url, params=params)
+    r = httpx.get(url, params=params, timeout=_DEFAULT_TIMEOUT)
     data_json = r.json()
 
     if not data_json['data']['diff']:

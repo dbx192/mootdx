@@ -37,7 +37,6 @@ def quotes(symbol, action, market, output):
     client = Quotes.factory(market=market, multithread=True)
 
     try:
-        action = 'bars' if 'daily' else action
         if action == 'daily':
             frequency = 9
         elif action == 'minute':

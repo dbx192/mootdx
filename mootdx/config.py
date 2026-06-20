@@ -30,7 +30,8 @@ def setup():
     global settings
 
     def load_config():
-        options = json.load(open(CONF, 'r', encoding='utf-8'))
+        with open(CONF, 'r', encoding='utf-8') as fp:
+            options = json.load(fp)
         settings.update(options)
 
     try:

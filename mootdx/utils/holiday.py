@@ -18,6 +18,9 @@ from mootdx.logger import logger
 
 JS_DECODE = (Path(__file__).parent / 'holiday.js').read_text(encoding='utf-8')
 
+# 默认请求超时（秒），避免在网络异常时无限阻塞
+DEFAULT_TIMEOUT = httpx.Timeout(10.0, connect=5.0)
+
 
 def holidays() -> pd.DataFrame:
     try:
@@ -33,7 +36,7 @@ def holidays() -> pd.DataFrame:
     def _holidays() -> pd.DataFrame:
 
         logger.debug('调用远程接口')
-        client = httpx.Client(verify=False)
+        client = httpx.Client(verify=False, timeout=DEFAULT_TIMEOUT)
 
         url = 'https://finance.sina.com.cn/realstock/company/klc_td_sh.txt'
         res = client.get(url)
@@ -118,10 +121,11 @@ def holiday(date=None, format_=None, country=None, result=False):
 @file_cache(filepath=get_config_path('caches/holiday.plk'), refresh_time=3600 * 24)
 def _holiday():
     logger.debug('调用远程接口')
-    res = httpx.get('https://www.tdx.com.cn/url/holiday/')
+    res = httpx.get('https://www.tdx.com.cn/url/holiday/', timeout=DEFAULT_TIMEOUT)
 
-    res.encoding = 'gbk'
-    ret = re.findall(r'<textarea id="data" style="display:none;">([\s\w\W]+)</textarea>', res.text, re.M)[0].strip()
+    # httpx 的 encoding 属性在不同版本行为不一致，直接用 content.decode 更可靠
+    text = res.content.decode('gbk', errors='replace')
+    ret = re.findall(r'<textarea id="data" style="display:none;">([\s\w\W]+)</textarea>', text, re.M)[0].strip()
 
     df = pd.read_csv(StringIO(ret), sep='|')
     df = df.iloc[:, :4]

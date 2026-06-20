@@ -13,12 +13,11 @@ classifiers = [
     "License :: OSI Approved :: MIT License",
     "Natural Language :: English",
     "Programming Language :: Python :: 3",
-    "Programming Language :: Python :: 3.6",
-    "Programming Language :: Python :: 3.7",
-    "Programming Language :: Python :: 3.8",
     "Programming Language :: Python :: 3.9",
     "Programming Language :: Python :: 3.10",
     "Programming Language :: Python :: 3.11",
+    "Programming Language :: Python :: 3.12",
+    "Programming Language :: Python :: 3.13",
 ]
 
 
@@ -27,20 +26,26 @@ mootdx = "mootdx.__main__:entry"
 
 
 [tool.poetry.dependencies]
-python = "^3.8"
-httpx = "^0.25.0"
-tenacity = "^8.1.0"
-tdxpy = "^0.2.5"
-tqdm = "*"
-prettytable = "^3.5.0"
-click = "^8.1.3"
-typing-extensions = "^4.5.0"
-mini-racer = "^0.12.0"
+# 核心依赖：仅设置最低版本，不再锁死小版本，避免 h11/httpcore/httpx 冲突
+python = ">=3.9,<4.0"
+httpx = ">=0.25,<1.0"
+tenacity = ">=8.1,<9.0"
+tdxpy = ">=0.2.5,<1.0"
+tqdm = ">=4.60,<5.0"
+prettytable = ">=3.5,<4.0"
+click = ">=8.1,<9.0"
+typing-extensions = ">=4.5,<5.0"
+mini-racer = {version = ">=0.12,<1.0", optional = true}
 
 [tool.poetry.group.test.dependencies]
-pytest-cov = "^4.0.0"
-freezegun = "^1.2.2"
-pytest = "^7.3.1"
+pytest-cov = ">=4.0,<6.0"
+freezegun = ">=1.2,<2.0"
+pytest = ">=7.3,<9.0"
+
+# 可选依赖组，对应 README 中 pip install 'mootdx[cli]' / 'mootdx[all]'
+[tool.poetry.extras]
+cli = ["click", "prettytable"]
+all = ["click", "prettytable", "mini-racer"]
 
 [build-system]
 requires = ["poetry-core"]
