@@ -1,73 +1,57 @@
+"""Convert text files exported by TDX to CSV."""
+
+from __future__ import annotations
+
 import asyncio
-import glob
-from functools import partial
+from concurrent.futures import ThreadPoolExecutor
 from pathlib import Path
 
 import pandas as pd
 
 from mootdx.logger import logger
 
+_COLUMNS = ["date", "open", "high", "low", "close", "volume", "amount"]
 
-def _get_event_loop():
-    """兼容获取事件循环，Python 3.10+ 不再自动创建事件循环"""
+
+def txt2csv(infile: str | Path, outfile: str | Path | None = None) -> pd.DataFrame:
+    source = Path(infile)
     try:
-        loop = asyncio.get_event_loop()
-        if loop.is_closed():
-            raise RuntimeError('loop closed')
-    except RuntimeError:
-        loop = asyncio.new_event_loop()
-        asyncio.set_event_loop(loop)
-    return loop
+        frame = pd.read_csv(
+            source,
+            names=_COLUMNS,
+            header=2,
+            skipfooter=1,
+            index_col="date",
+            engine="python",
+            encoding="gbk",
+        )
+    except (FileNotFoundError, OSError, UnicodeError, ValueError, TypeError, pd.errors.ParserError) as exc:
+        logger.warning("无法解析通达信导出文件 %s: %s", source, exc)
+        return pd.DataFrame()
+
+    destination = Path(outfile) if outfile is not None else source.with_suffix(".csv")
+    destination.parent.mkdir(parents=True, exist_ok=True)
+    frame.to_csv(destination)
+    return frame
 
 
-def txt2csv(infile: str, outfile: str = None) -> pd.DataFrame:
-    """通达信导出文件转换为 Pandas 可用的 csv 文件
-
-    :param infile: 通达信导出的 txt 文件路径
-    :param outfile: 转换后的目标 csv 文件路径
-    """
-
-    try:
-        names = ['date', 'open', 'high', 'low', 'close', 'volume', 'amount']
-        df = pd.read_csv(infile, names=names, header=2, skipfooter=1, index_col='date', engine='python', encoding='gbk')
-
-        # 传参 outfile 目录存在则写文件
-        outfile = outfile if outfile else infile.replace('.txt', '.csv')
-        Path(outfile).parent.is_dir() and df.to_csv(outfile)
-
-        return df
-    except FileNotFoundError as ex:
-        logger.error(f'输入文件不存在: {infile}')
-        return pd.DataFrame(None)
-    except (ValueError, TypeError) as ex:
-        logger.error(f'无法解析输入文件: {infile}')
-        return pd.DataFrame(None)
+async def convert(src: str | Path, dst: str | Path) -> pd.DataFrame:
+    return await asyncio.to_thread(txt2csv, src, dst)
 
 
-async def covert(src, dst):
-    return await asyncio.get_running_loop().run_in_executor(None, partial(txt2csv, infile=src, outfile=dst))
+async def covert(src: str | Path, dst: str | Path) -> pd.DataFrame:
+    """Deprecated misspelling retained for backwards compatibility."""
+
+    return await convert(src, dst)
 
 
-def batch(src, dst):
-    """批量转换通达信导出文件
-
-    :param src: 来源目录
-    :param dst: 目标目录
-    """
-
-    tasks = []
-    event = _get_event_loop()
-
-    # 分配任务
-    for x in glob.glob1(src, '*.txt'):
-        src_ = str(Path(src, x))
-        dst_ = src_.replace('.txt', '.csv')
-
-        task = event.create_task(covert(src=src_, dst=dst_))
-        tasks.append(task)
-
-    # 执行任务
-    event.run_until_complete(asyncio.wait(tasks))
+def batch(src: str | Path, dst: str | Path) -> list[pd.DataFrame]:
+    source = Path(src)
+    destination = Path(dst)
+    destination.mkdir(parents=True, exist_ok=True)
+    files = sorted(source.glob("*.txt"))
+    with ThreadPoolExecutor(max_workers=min(8, max(1, len(files)))) as pool:
+        return list(pool.map(lambda path: txt2csv(path, destination / path.with_suffix(".csv").name), files))
 
 
-__all__ = ('txt2csv', 'batch')
+__all__ = ("batch", "convert", "covert", "txt2csv")

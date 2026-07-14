@@ -1,11 +1,2 @@
-# 核心依赖：仅设置最低版本，不再锁死小版本
-# h11 / httpcore / anyio / sniffio 等由 httpx 自动传递依赖，不再手动锁定
-click>=8.1,<9.0; python_version >= "3.9" and python_version < "4.0"
-colorama>=0.4,<1.0; python_version >= "3.9" and python_version < "4.0" and platform_system == "Windows"
-httpx>=0.25,<1.0; python_version >= "3.9" and python_version < "4.0"
-mini-racer>=0.12,<1.0; python_version >= "3.9" and python_version < "4.0"
-prettytable>=3.5,<4.0; python_version >= "3.9" and python_version < "4.0"
-tdxpy>=0.2.5,<1.0; python_version >= "3.9" and python_version < "4.0"
-tenacity>=8.1,<9.0; python_version >= "3.9" and python_version < "4.0"
-tqdm>=4.60,<5.0; python_version >= "3.9" and python_version < "4.0"
-typing-extensions>=4.5,<5.0; python_version >= "3.9" and python_version < "4.0"
+# Compatibility install file.  Project metadata in pyproject.toml is authoritative.
+-e .
